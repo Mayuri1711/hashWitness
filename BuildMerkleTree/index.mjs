@@ -44,7 +44,7 @@ export const handler = async () => {
 
   // Step 3: Upload to S3
   const date = now.toISOString().split("T")[0];
-  const s3Key = `daily/root-${date}.txt`;
+  const s3Key = `${date}/root-${date}.txt`;
 
   const putCmd = new PutObjectCommand({
     Bucket: ROOT_BUCKET,

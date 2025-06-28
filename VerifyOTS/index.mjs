@@ -1,4 +1,3 @@
-// index.mjs
 import opentimestamps from "opentimestamps";
 import {
   S3Client,
@@ -25,7 +24,7 @@ export const handler = async (event) => {
   const yesterday = new Date();
   yesterday.setUTCDate(yesterday.getUTCDate() - 1);
   const isoDate = yesterday.toISOString().split("T")[0];
-  const KEY = `ots-proof-${isoDate}.ots`;
+  const KEY = `${isoDate}/ots-proof-${isoDate}.ots`;
   try {
     const s3Object = await s3.send(
       new GetObjectCommand({ Bucket: BUCKET, Key: KEY })

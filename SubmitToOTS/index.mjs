@@ -1,17 +1,34 @@
-// index.mjs
-
 import opentimestamps from "opentimestamps";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+} from "@aws-sdk/client-s3";
 import crypto from "crypto";
 
 const s3 = new S3Client();
-
+async function streamToBuffer(stream) {
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
+}
 export const handler = async (event) => {
   try {
     // 1. Create hash from file/data
-    const fileData = Buffer.from("Sample data to hash");
-    const hashBuffer = crypto.createHash("sha256").update(fileData).digest();
-
+    const BUCKET = process.env.OTS_BUCKET;
+    const now = new Date();
+    const isoDate = now.toISOString().split("T")[0];
+    const KEY = `${isoDate}/root-${isoDate}.txt`;
+    const s3Object = await s3.send(
+      new GetObjectCommand({ Bucket: BUCKET, Key: KEY })
+    );
+    const rootFileBuffer = await streamToBuffer(s3Object.Body);
+    const hashBuffer = crypto
+      .createHash("sha256")
+      .update(rootFileBuffer)
+      .digest();
     // 2. Create OTS detached file
     const { DetachedTimestampFile, Ops } = opentimestamps;
     const detached = DetachedTimestampFile.fromHash(
@@ -25,9 +42,8 @@ export const handler = async (event) => {
 
     // 4. Serialize .ots
     const otsBuffer = detached.serializeToBytes();
-    const now = new Date();
-    const isoDate = now.toISOString().split("T")[0];
-    const otsKey = `ots-proof-${isoDate}.ots`;
+
+    const otsKey = `${isoDate}/ots-proof-${isoDate}.ots`;
 
     // 5. Upload to S3
     await s3.send(
